@@ -17,12 +17,15 @@ import com.android.scholar.ui.theme.ScholARTheme
 import com.android.scholar.viewmodel.ScholarViewModel
 
 class MainActivity : ComponentActivity() {
-    private val viewModel : ScholarViewModel by viewModels()
+    private val viewModel: ScholarViewModel by viewModels()
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ScholarOverlay(viewModel)
+            ScholARTheme {
+                ScholarOverlay(viewModel)
+            }
         }
     }
 }
