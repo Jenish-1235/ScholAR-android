@@ -1,6 +1,7 @@
 package com.android.scholar.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.scholar.model.AudioState
@@ -8,6 +9,7 @@ import com.android.scholar.model.ConnectionState
 import com.android.scholar.model.LearningResponse
 import com.android.scholar.service.AudioPlayerManager
 import com.android.scholar.service.WebSocketService
+import com.android.scholar.utils.AudioDebugUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +41,27 @@ class ScholarViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             learningResponse.collect { response ->
                 if (response != null) {
+                    Log.d("ScholarViewModel", "=== NEW LEARNING RESPONSE RECEIVED ===")
                     _isLoading.value = false
+                    // Log the response for debugging
+                    AudioDebugUtils.logResponseReceived(response)
+                    
+                    // Small delay to ensure UI is updated, then auto-play audio
+                    kotlinx.coroutines.delay(500) // 500ms delay
+                    Log.d("ScholarViewModel", "Starting auto-play of TTS audio...")
+                    playTtsAudio(response.ttsUrl)
+                }
+            }
+        }
+        
+        // Observe audio errors for automatic retry
+        viewModelScope.launch {
+            audioState.collect { state ->
+                if (state.error != null && state.currentUrl != null) {
+                    Log.d("ScholarViewModel", "Audio error detected: ${state.error}")
+                    // Auto-retry after 2 seconds
+                    kotlinx.coroutines.delay(2000)
+                    retryAudioPlayback()
                 }
             }
         }
@@ -68,8 +90,29 @@ class ScholarViewModel(application: Application) : AndroidViewModel(application)
     
     // Audio operations
     fun playTtsAudio(ttsUrl: String) {
+        Log.d("ScholarViewModel", "=== ATTEMPTING TTS PLAYBACK ===")
+        Log.d("ScholarViewModel", "Received TTS URL: $ttsUrl")
+        
+        if (!AudioDebugUtils.validateTtsUrl(ttsUrl)) {
+            Log.e("ScholarViewModel", "Invalid TTS URL: $ttsUrl")
+            return
+        }
+        
         val completeUrl = webSocketService.getCompleteTtsUrl(ttsUrl)
+        Log.d("ScholarViewModel", "Complete audio URL: $completeUrl")
+        
+        AudioDebugUtils.logAudioPlaybackAttempt(ttsUrl, completeUrl)
+        
+        // Start playback immediately
+        Log.d("ScholarViewModel", "Triggering audio playback...")
         audioPlayerManager.playTtsAudio(completeUrl)
+        
+        // Log success after a short delay
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(1000)
+            val currentAudioState = audioState.value
+            Log.d("ScholarViewModel", "Audio state after 1s: isPlaying=${currentAudioState.isPlaying}, isLoading=${currentAudioState.isLoading}, error=${currentAudioState.error}")
+        }
     }
     
     fun pauseAudio() {
@@ -86,6 +129,26 @@ class ScholarViewModel(application: Application) : AndroidViewModel(application)
     
     fun clearAudioError() {
         audioPlayerManager.clearError()
+    }
+    
+    private fun retryAudioPlayback() {
+        val currentResponse = learningResponse.value
+        if (currentResponse != null) {
+            Log.d("ScholarViewModel", "Retrying audio playback for: ${currentResponse.ttsUrl}")
+            clearAudioError()
+            playTtsAudio(currentResponse.ttsUrl)
+        }
+    }
+    
+    // Method to manually trigger audio playback for debugging
+    fun forcePlayAudio() {
+        val currentResponse = learningResponse.value
+        if (currentResponse != null) {
+            Log.d("ScholarViewModel", "Force playing audio for: ${currentResponse.ttsUrl}")
+            stopAudio() // Stop any current playback
+            clearAudioError()
+            playTtsAudio(currentResponse.ttsUrl)
+        }
     }
     
     // UI operations

@@ -63,12 +63,24 @@ fun LearningResponseCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Learning Response",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Column {
+                    Text(
+                        text = "Learning Response",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    // Auto-play indicator
+                    if (audioState.isPlaying || audioState.isLoading) {
+                        Text(
+                            text = if (audioState.isLoading) "Loading audio..." else "🔊 Auto-playing",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                }
                 
                 // Audio control button
                 IconButton(
@@ -173,6 +185,23 @@ fun LearningResponseCard(
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+            
+            // Debug: Show TTS URL being used
+            if (audioState.currentUrl != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Text(
+                        text = "🔗 Audio URL: ${audioState.currentUrl}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(8.dp)
                     )
                 }
             }
