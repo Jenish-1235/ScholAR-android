@@ -118,7 +118,7 @@ fun LearningResponseCard(
                 )
             ) {
                 Text(
-                    text = response.explanation,
+                    text = response.explanation ?: "No explanation available",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(16.dp),
                     lineHeight = 24.sp
@@ -128,7 +128,8 @@ fun LearningResponseCard(
             Spacer(modifier = Modifier.height(20.dp))
             
             // Practice Questions Section
-            if (response.practiceQuestions.isNotEmpty()) {
+            val questions = response.practiceQuestions ?: emptyList()
+            if (questions.isNotEmpty()) {
                 Text(
                     text = "Practice Questions",
                     style = MaterialTheme.typography.titleMedium,
@@ -137,7 +138,7 @@ fun LearningResponseCard(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 
-                response.practiceQuestions.forEachIndexed { index, question ->
+                questions.forEachIndexed { index, question ->
                     QuestionCard(
                         question = question,
                         questionNumber = index + 1,
@@ -151,7 +152,8 @@ fun LearningResponseCard(
             }
             
             // Additional Resources Section
-            if (response.additionalUrls.isNotEmpty()) {
+            val urls = response.additionalUrls ?: emptyList()
+            if (urls.isNotEmpty()) {
                 Text(
                     text = "Additional Resources",
                     style = MaterialTheme.typography.titleMedium,
@@ -160,7 +162,7 @@ fun LearningResponseCard(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
                 
-                response.additionalUrls.forEachIndexed { index, url ->
+                urls.forEachIndexed { index, url ->
                     ResourceLinkCard(
                         url = url,
                         onClick = {

@@ -21,9 +21,9 @@ object AudioDebugUtils {
     
     fun logResponseReceived(response: LearningResponse) {
         Log.d("AudioDebug", "Learning response received with TTS URL: ${response.ttsUrl}")
-        Log.d("AudioDebug", "Explanation length: ${response.explanation.length} characters")
-        Log.d("AudioDebug", "Practice questions: ${response.practiceQuestions.size}")
-        Log.d("AudioDebug", "Additional URLs: ${response.additionalUrls.size}")
+        Log.d("AudioDebug", "Explanation length: ${response.explanation?.length ?: 0} characters")
+        Log.d("AudioDebug", "Practice questions: ${response.practiceQuestions?.size ?: 0}")
+        Log.d("AudioDebug", "Additional URLs: ${response.additionalUrls?.size ?: 0}")
     }
     
     fun validateTtsUrl(ttsUrl: String): Boolean {

@@ -25,11 +25,20 @@ data class LearningResponseText(
 )
 
 data class LearningResponse(
+    @SerializedName("type")
     val type: String,
-    val explanation: String,
-    val practiceQuestions: List<String>,
-    val additionalUrls: List<String>,
-    val ttsUrl: String
+    
+    @SerializedName("explanation")
+    val explanation: String?,
+    
+    @SerializedName("practice_questions")
+    val practiceQuestions: List<String>?,
+    
+    @SerializedName("additional_urls")
+    val additionalUrls: List<String>?,
+    
+    @SerializedName("tts_url")
+    val ttsUrl: String?
 )
 
 // Extension function to convert BackendResponse to LearningResponse

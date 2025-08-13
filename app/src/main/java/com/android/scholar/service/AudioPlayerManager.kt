@@ -104,7 +104,7 @@ class AudioPlayerManager(private val context: Context) {
     
     fun playTtsAudio(audioUrl: String) {
         try {
-            Log.d("AudioPlayer", "=== STARTING MEDIAPLAYEF AUDIO PLAYBACK ===")
+            Log.d("AudioPlayer", "=== STARTING MEDIAPLAYER AUDIO PLAYBACK ===")
             Log.d("AudioPlayer", "Audio URL: $audioUrl")
             
             // Check device volume
@@ -118,7 +118,12 @@ class AudioPlayerManager(private val context: Context) {
             }
             
             // Release any existing MediaPlayer
-            mediaPlayer?.release()
+            try {
+                mediaPlayer?.release()
+                Log.d("AudioPlayer", "Previous MediaPlayer released")
+            } catch (e: Exception) {
+                Log.w("AudioPlayer", "Error releasing previous MediaPlayer", e)
+            }
             
             _audioState.value = _audioState.value.copy(
                 isLoading = true,
@@ -131,11 +136,13 @@ class AudioPlayerManager(private val context: Context) {
             Log.d("AudioPlayer", "Audio focus granted: $audioFocusGranted")
             
             // Create new MediaPlayer
+            Log.d("AudioPlayer", "Creating new MediaPlayer instance...")
             mediaPlayer = MediaPlayer().apply {
-                Log.d("AudioPlayer", "Creating MediaPlayer...")
+                Log.d("AudioPlayer", "MediaPlayer created successfully")
                 
                 // Set audio attributes for speech
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    Log.d("AudioPlayer", "Setting audio attributes (API 21+)...")
                     setAudioAttributes(
                         AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -143,24 +150,36 @@ class AudioPlayerManager(private val context: Context) {
                             .build()
                     )
                 } else {
+                    Log.d("AudioPlayer", "Setting audio stream type (legacy)...")
                     @Suppress("DEPRECATION")
                     setAudioStreamType(AudioManager.STREAM_MUSIC)
                 }
                 
                 // Set listeners
+                Log.d("AudioPlayer", "Setting MediaPlayer listeners...")
                 setOnPreparedListener { mp ->
-                    Log.d("AudioPlayer", "MediaPlayer prepared, starting playback...")
+                    Log.d("AudioPlayer", "*** MediaPlayer PREPARED - Starting playback! ***")
                     _audioState.value = _audioState.value.copy(
                         isLoading = false,
                         isPlaying = true,
                         error = null
                     )
-                    mp.start()
-                    Log.d("AudioPlayer", "MediaPlayer started successfully!")
+                    try {
+                        mp.start()
+                        Log.d("AudioPlayer", "*** MediaPlayer START called successfully! ***")
+                        Log.d("AudioPlayer", "MediaPlayer isPlaying: ${mp.isPlaying}")
+                    } catch (e: Exception) {
+                        Log.e("AudioPlayer", "Error calling start() on MediaPlayer", e)
+                        _audioState.value = _audioState.value.copy(
+                            isLoading = false,
+                            isPlaying = false,
+                            error = "Failed to start playback: ${e.message}"
+                        )
+                    }
                 }
                 
                 setOnCompletionListener { 
-                    Log.d("AudioPlayer", "MediaPlayer playback completed")
+                    Log.d("AudioPlayer", "*** MediaPlayer playback COMPLETED ***")
                     _audioState.value = _audioState.value.copy(
                         isPlaying = false,
                         isLoading = false
@@ -169,27 +188,44 @@ class AudioPlayerManager(private val context: Context) {
                 }
                 
                 setOnErrorListener { _, what, extra ->
-                    Log.e("AudioPlayer", "MediaPlayer error: what=$what, extra=$extra")
+                    Log.e("AudioPlayer", "*** MediaPlayer ERROR: what=$what, extra=$extra ***")
                     _audioState.value = _audioState.value.copy(
                         isPlaying = false,
                         isLoading = false,
-                        error = "MediaPlayer error: $what, $extra"
+                        error = "MediaPlayer error: what=$what, extra=$extra"
                     )
                     releaseAudioFocus()
                     true
                 }
                 
+                setOnInfoListener { _, what, extra ->
+                    Log.d("AudioPlayer", "MediaPlayer info: what=$what, extra=$extra")
+                    false
+                }
+                
                 // Set data source and prepare
                 Log.d("AudioPlayer", "Setting data source: $audioUrl")
-                setDataSource(audioUrl)
+                try {
+                    setDataSource(audioUrl)
+                    Log.d("AudioPlayer", "Data source set successfully")
+                } catch (e: Exception) {
+                    Log.e("AudioPlayer", "Error setting data source", e)
+                    throw e
+                }
                 
-                Log.d("AudioPlayer", "Preparing MediaPlayer asynchronously...")
-                prepareAsync()
+                Log.d("AudioPlayer", "Starting async preparation...")
+                try {
+                    prepareAsync()
+                    Log.d("AudioPlayer", "prepareAsync() called successfully")
+                } catch (e: Exception) {
+                    Log.e("AudioPlayer", "Error calling prepareAsync()", e)
+                    throw e
+                }
             }
             
-            Log.d("AudioPlayer", "=== MEDIAPLAYEF SETUP COMPLETE ===")
+            Log.d("AudioPlayer", "=== MEDIAPLAYER SETUP COMPLETE ===")
         } catch (e: Exception) {
-            Log.e("AudioPlayer", "=== MEDIAPLAYEF SETUP FAILED ===", e)
+            Log.e("AudioPlayer", "=== MEDIAPLAYER SETUP FAILED ===", e)
             _audioState.value = _audioState.value.copy(
                 isPlaying = false,
                 isLoading = false,

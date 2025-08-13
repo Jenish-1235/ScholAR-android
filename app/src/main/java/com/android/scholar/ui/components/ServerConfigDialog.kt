@@ -65,7 +65,7 @@ fun ServerConfigDialog(
                             isHostError = it.isBlank()
                         },
                         label = { Text("Server Host") },
-                        placeholder = { Text("192.168.1.100") },
+                        placeholder = { Text("10.10.30.172") },
                         isError = isHostError,
                         supportingText = if (isHostError) {
                             { Text("Host cannot be empty") }

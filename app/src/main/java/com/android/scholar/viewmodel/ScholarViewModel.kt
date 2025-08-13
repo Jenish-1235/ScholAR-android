@@ -46,10 +46,16 @@ class ScholarViewModel(application: Application) : AndroidViewModel(application)
                     // Log the response for debugging
                     AudioDebugUtils.logResponseReceived(response)
                     
-                    // Small delay to ensure UI is updated, then auto-play audio
-                    kotlinx.coroutines.delay(500) // 500ms delay
-                    Log.d("ScholarViewModel", "Starting auto-play of TTS audio...")
-                    playTtsAudio(response.ttsUrl)
+                    // Auto-play audio if TTS URL is available
+                    val ttsUrl = response.ttsUrl
+                    if (!ttsUrl.isNullOrEmpty()) {
+                        // Small delay to ensure UI is updated, then auto-play audio
+                        kotlinx.coroutines.delay(500) // 500ms delay
+                        Log.d("ScholarViewModel", "Starting auto-play of TTS audio...")
+                        playTtsAudio(ttsUrl)
+                    } else {
+                        Log.w("ScholarViewModel", "No TTS URL available in response")
+                    }
                 }
             }
         }
@@ -68,7 +74,7 @@ class ScholarViewModel(application: Application) : AndroidViewModel(application)
     }
     
     // WebSocket operations
-    fun connectToServer(host: String = "192.168.1.100", port: Int = 8000) {
+    fun connectToServer(host: String = "10.10.30.172", port: Int = 8000) {
         _isLoading.value = true
         webSocketService.connect(host, port)
     }
@@ -133,21 +139,27 @@ class ScholarViewModel(application: Application) : AndroidViewModel(application)
     
     private fun retryAudioPlayback() {
         val currentResponse = learningResponse.value
-        if (currentResponse != null) {
-            Log.d("ScholarViewModel", "Retrying audio playback for: ${currentResponse.ttsUrl}")
+        val ttsUrl = currentResponse?.ttsUrl
+        if (currentResponse != null && !ttsUrl.isNullOrEmpty()) {
+            Log.d("ScholarViewModel", "Retrying audio playback for: $ttsUrl")
             clearAudioError()
-            playTtsAudio(currentResponse.ttsUrl)
+            playTtsAudio(ttsUrl)
+        } else {
+            Log.w("ScholarViewModel", "Cannot retry: no valid TTS URL available")
         }
     }
     
     // Method to manually trigger audio playback for debugging
     fun forcePlayAudio() {
         val currentResponse = learningResponse.value
-        if (currentResponse != null) {
-            Log.d("ScholarViewModel", "Force playing audio for: ${currentResponse.ttsUrl}")
+        val ttsUrl = currentResponse?.ttsUrl
+        if (currentResponse != null && !ttsUrl.isNullOrEmpty()) {
+            Log.d("ScholarViewModel", "Force playing audio for: $ttsUrl")
             stopAudio() // Stop any current playback
             clearAudioError()
-            playTtsAudio(currentResponse.ttsUrl)
+            playTtsAudio(ttsUrl)
+        } else {
+            Log.w("ScholarViewModel", "Cannot force play: no valid TTS URL available")
         }
     }
     

@@ -108,29 +108,46 @@ class WebSocketService {
     
     private fun handleMessage(text: String) {
         try {
-            // First try to parse as BackendResponse
+            Log.d("WebSocket", "Parsing message: $text")
+            
+            // Try to parse as direct LearningResponse first (new format)
+            Log.d("WebSocket", "Attempting to parse as LearningResponse...")
+            val directResponse = gson.fromJson(text, LearningResponse::class.java)
+            Log.d("WebSocket", "Parsed LearningResponse: type='${directResponse?.type}', explanation length=${directResponse?.explanation?.length ?: 0}, ttsUrl='${directResponse?.ttsUrl}'")
+            
+            if (validateLearningResponse(directResponse)) {
+                _learningResponse.value = directResponse
+                Log.d("WebSocket", "Valid direct learning response received")
+                return
+            }
+            
+            // Fallback: try to parse as BackendResponse (old format)
+            Log.d("WebSocket", "Attempting to parse as BackendResponse...")
             val backendResponse = gson.fromJson(text, com.android.scholar.model.BackendResponse::class.java)
+            Log.d("WebSocket", "Parsed BackendResponse: type='${backendResponse?.type}'")
+            
             if (validateBackendResponse(backendResponse)) {
                 val learningResponse = backendResponse.toLearningResponse()
                 _learningResponse.value = learningResponse
                 Log.d("WebSocket", "Valid backend response received and converted")
-            } else {
-                // Fallback: try to parse as direct LearningResponse
-                val directResponse = gson.fromJson(text, LearningResponse::class.java)
-                if (validateLearningResponse(directResponse)) {
-                    _learningResponse.value = directResponse
-                    Log.d("WebSocket", "Valid direct learning response received")
-                } else {
-                    Log.w("WebSocket", "Invalid response structure")
-                    _connectionState.value = _connectionState.value.copy(
-                        error = "Received invalid response format"
-                    )
-                }
+                return
             }
+            
+            // If neither format works
+            Log.w("WebSocket", "Invalid response structure for both formats")
+            _connectionState.value = _connectionState.value.copy(
+                error = "Received invalid response format"
+            )
+            
         } catch (e: JsonSyntaxException) {
             Log.e("WebSocket", "JSON parsing error", e)
             _connectionState.value = _connectionState.value.copy(
                 error = "Failed to parse response: ${e.message}"
+            )
+        } catch (e: Exception) {
+            Log.e("WebSocket", "Unexpected error handling message", e)
+            _connectionState.value = _connectionState.value.copy(
+                error = "Unexpected error: ${e.message}"
             )
         }
     }
@@ -143,10 +160,31 @@ class WebSocketService {
     }
     
     private fun validateLearningResponse(response: LearningResponse?): Boolean {
-        return response != null &&
-                response.type == "learning_response" &&
-                response.explanation.isNotEmpty() &&
-                response.ttsUrl.isNotEmpty()
+        Log.d("WebSocket", "=== VALIDATING LEARNING RESPONSE ===")
+        Log.d("WebSocket", "Response is null: ${response == null}")
+        
+        if (response == null) {
+            Log.w("WebSocket", "Response is null")
+            return false
+        }
+        
+        Log.d("WebSocket", "Response type: '${response.type}'")
+        Log.d("WebSocket", "Response explanation null/empty: ${response.explanation.isNullOrEmpty()}")
+        Log.d("WebSocket", "Response ttsUrl null/empty: ${response.ttsUrl.isNullOrEmpty()}")
+        Log.d("WebSocket", "Response ttsUrl value: '${response.ttsUrl}'")
+        
+        val typeValid = response.type == "learning_response"
+        val explanationValid = !response.explanation.isNullOrEmpty()
+        val ttsUrlValid = !response.ttsUrl.isNullOrEmpty()
+        
+        Log.d("WebSocket", "Type valid: $typeValid")
+        Log.d("WebSocket", "Explanation valid: $explanationValid")
+        Log.d("WebSocket", "TTS URL valid: $ttsUrlValid")
+        
+        val isValid = typeValid && explanationValid && ttsUrlValid
+        Log.d("WebSocket", "Overall validation result: $isValid")
+        
+        return isValid
     }
     
     private fun handleConnectionFailure() {
